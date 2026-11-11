@@ -1,0 +1,40 @@
+services:
+  user-db:
+    image: mysql:8.0
+    container_name: shopease-user-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3309:3306"
+    volumes:
+      - user_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  user-service:
+    build: .
+    container_name: shopease-user-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: user-db
+      MYSQL_PORT: 3306
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8002:8002"
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+volumes:
+  user_mysql_data:
